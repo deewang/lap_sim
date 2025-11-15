@@ -21,7 +21,7 @@ build-image:
 		.
 
 run-container:
-	@docker run --name $(CONTAINER_NAME) -v $(PWD):/home/fubc/lap-sim $(IMAGE_NAME)
+	@docker run --name $(CONTAINER_NAME) -v $(PWD):/home/fubc/chrono/lap_sim $(IMAGE_NAME)
 
 build:
 	@if ! docker image inspect $(IMAGE_NAME) >/dev/null 2>&1; then \
@@ -31,7 +31,7 @@ build:
 	fi
 	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
 		echo "Creating container $(CONTAINER_NAME)"; \
-		docker run --name $(CONTAINER_NAME) -v $(PWD):/home/fubc/lap-sim -it $(IMAGE_NAME) /bin/bash; \
+		docker run --name $(CONTAINER_NAME) -v $(PWD):/home/fubc/chrono/lap_sim -it $(IMAGE_NAME) /bin/bash; \
 	else \
 		echo "Container $(CONTAINER_NAME) already exists, skipping creation"; \
 		make start; \
