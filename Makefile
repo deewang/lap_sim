@@ -2,6 +2,11 @@
 
 MAKEFLAGS += --no-print-directory
 
+# Check if .env file exists at the start
+ifeq (,$(wildcard .env))
+$(error ERROR: .env file not found! Use .env.example to create one.)
+endif
+
 # Load environment variables from .env file if it exists
 -include .env
 export
@@ -38,8 +43,8 @@ build:
 	fi
 
 clean:
-	make clean-container
-	make clean-image
+	@make clean-container
+	@make clean-image
 	@echo "Cleaned up image $(IMAGE_NAME) and container $(CONTAINER_NAME)"
 
 clean-image:

@@ -128,19 +128,18 @@ ARG CHRONO_DIR
 ARG PACKAGE_DIR
 ARG USERSHELLPROFILE
 
-# Check the image is Ubuntu, error out if not
-# RUN if [ ! -f /etc/os-release ] || ! grep -q 'ID=ubuntu' /etc/os-release; then echo "This snippet can only be used with an Ubuntu image."; exit 1; fi
-
 # Vulkan
-RUN wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc && \
+RUN sudo apt update && sudo apt install --no-install-recommends -y lsb-release && \
+    wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc && \
     UBUNTU_CODENAME=$(lsb_release -cs) && \
     sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan.list "http://packages.lunarg.com/vulkan/lunarg-vulkan-${UBUNTU_CODENAME}.list" && \
     sudo apt update && sudo apt install vulkan-sdk -y && \
     sudo apt clean && sudo apt autoremove -y && sudo rm -rf /var/lib/apt/lists/*
 
 # Build the VSG dependencies
-RUN cd ${CHRONO_DIR}/contrib/build-scripts/linux/ && \
-    bash buildVSG.sh ${PACKAGE_DIR}/vsg/
+RUN cd ${CHRONO_DIR}/contrib/build-scripts/vsg/ && \
+    bash buildVSG.sh ${PACKAGE_DIR}/vsg/ && \
+    rm -rf build_*
 
 # Update shell config
 RUN echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${PACKAGE_DIR}/vsg/lib" >> ${USERSHELLPROFILE}
@@ -166,8 +165,8 @@ RUN ${PRE_BUILD_SCRIPTS} && \
     cmake ../ -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_DEMOS=ON \
-        -DBUILD_BENCHMARKING=OFF \
-        -DBUILD_TESTING=OFF \
+        -DBUILD_BENCHMARKING=ON \
+        -DBUILD_TESTING=ON \
         -DCMAKE_LIBRARY_PATH=$(find /usr/local/cuda/ -type d -name stubs) \
         -DEigen3_DIR=/usr/lib/cmake/eigen3 \
         -DCMAKE_INSTALL_PREFIX=${CHRONO_INSTALL_DIR} \
