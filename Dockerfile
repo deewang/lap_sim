@@ -102,7 +102,7 @@ RUN set -e && \
 
 # Update CMake options to enable OpenCRG and point to installation
 ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-    -DCH_ENABLE_OPENCRG=ON \
+    -DENABLE_OPENCRG=ON \
     -DOpenCRG_INCLUDE_DIR=${OPENCRG_INSTALL_DIR}/include \
     -DOpenCRG_LIBRARY=${OPENCRG_INSTALL_DIR}/lib/libOpenCRG.1.1.2.a"
 
@@ -121,40 +121,41 @@ RUN sudo apt update && \
 
 # Update CMake options
 ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-    -DCH_ENABLE_MODULE_IRRLICHT=ON"
+    -DENABLE_MODULE_IRRLICHT=ON"
 
-# Install Chrono::VSG
-ARG CHRONO_DIR
-ARG PACKAGE_DIR
-ARG USERSHELLPROFILE
+# # Install Chrono::VSG
+# ARG CHRONO_DIR
+# ARG PACKAGE_DIR
+# ARG USERSHELLPROFILE
 
-# Vulkan
-RUN sudo apt update && sudo apt install --no-install-recommends -y lsb-release && \
-    wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc && \
-    UBUNTU_CODENAME=$(lsb_release -cs) && \
-    sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan.list "http://packages.lunarg.com/vulkan/lunarg-vulkan-${UBUNTU_CODENAME}.list" && \
-    sudo apt update && sudo apt install vulkan-sdk -y && \
-    sudo apt clean && sudo apt autoremove -y && sudo rm -rf /var/lib/apt/lists/*
+# # Vulkan
+# RUN sudo apt update && sudo apt install --no-install-recommends -y lsb-release && \
+#     wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc && \
+#     UBUNTU_CODENAME=$(lsb_release -cs) && \
+#     sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan.list "http://packages.lunarg.com/vulkan/lunarg-vulkan-${UBUNTU_CODENAME}.list" && \
+#     sudo apt update && sudo apt install vulkan-sdk -y && \
+#     sudo apt clean && sudo apt autoremove -y && sudo rm -rf /var/lib/apt/lists/*
 
-# Build the VSG dependencies
-RUN cd ${CHRONO_DIR}/contrib/build-scripts/vsg/ && \
-    bash buildVSG.sh ${PACKAGE_DIR}/vsg/ && \
-    rm -rf build_*
+# # Build the VSG dependencies
+# RUN cd ${CHRONO_DIR}/contrib/build-scripts/vsg/ && \
+#     bash buildVSG.sh ${PACKAGE_DIR}/vsg/ && \
+#     rm -rf build_*
 
-# Update shell config
-RUN echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${PACKAGE_DIR}/vsg/lib" >> ${USERSHELLPROFILE}
+# # Update shell config
+# RUN echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${PACKAGE_DIR}/vsg/lib" >> ${USERSHELLPROFILE}
 
-# Update CMake options
-ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-    -DCH_ENABLE_MODULE_VSG=ON \
-    -Dvsg_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsg \
-    -DvsgImGui_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsgImGui \
-    -DvsgXchange_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsgXchange"
+# # Update CMake options
+# ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
+#     -DENABLE_MODULE_VSG=ON \
+#     -Dvsg_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsg \
+#     -DvsgImGui_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsgImGui \
+#     -DvsgXchange_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsgXchange"
 
 # Install Chrono::Vehicle
 # Update CMake options
 ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-    -DCH_ENABLE_MODULE_VEHICLE=ON"
+    -DENABLE_MODULE_VEHICLE=ON \
+    -DENABLE_MODULE_VEHICLE_MODELS=ON"
 
 # Install Chrono
 RUN ${PRE_BUILD_SCRIPTS} && \
@@ -165,8 +166,8 @@ RUN ${PRE_BUILD_SCRIPTS} && \
     cmake ../ -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_DEMOS=ON \
-        -DBUILD_BENCHMARKING=ON \
-        -DBUILD_TESTING=ON \
+        -DBUILD_BENCHMARKING=OFF \
+        -DBUILD_TESTING=OFF \
         -DCMAKE_LIBRARY_PATH=$(find /usr/local/cuda/ -type d -name stubs) \
         -DEigen3_DIR=/usr/lib/cmake/eigen3 \
         -DCMAKE_INSTALL_PREFIX=${CHRONO_INSTALL_DIR} \
