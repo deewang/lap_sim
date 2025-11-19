@@ -84,11 +84,6 @@ RUN sudo apt update && \
 # Clone Chrono before running the snippets
 RUN git clone --recursive -b ${CHRONO_BRANCH} ${CHRONO_REPO} ${CHRONO_DIR}
 
-# Include the snippets which install shared dependencies
-# These can be commented out or removed if they are no longer needed
-# INCLUDE ./cuda.dockerfile
-# INCLUDE ./ros.dockerfile
-
 # Install OpenCRG from source using the provided Chrono build script
 # OpenCRG is a library for specifying road surfaces in vehicle simulations
 ARG OPENCRG_INSTALL_DIR="${PACKAGE_DIR}/opencrg"
@@ -106,13 +101,6 @@ ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
     -DOpenCRG_INCLUDE_DIR=${OPENCRG_INSTALL_DIR}/include \
     -DOpenCRG_LIBRARY=${OPENCRG_INSTALL_DIR}/lib/libOpenCRG.1.1.2.a"
 
-# Then include the snippets for the modules you want to install
-# INCLUDE ./ch_ros.dockerfile
-# INCLUDE ./ch_vsg.dockerfile
-# INCLUDE ./ch_sensor.dockerfile
-# INCLUDE ./ch_parser.dockerfile
-# INCLUDE ./ch_python.dockerfile
-
 # Install Chrono::Irrlicht
 RUN sudo apt update && \
         sudo apt install --no-install-recommends -y \
@@ -122,34 +110,6 @@ RUN sudo apt update && \
 # Update CMake options
 ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
     -DENABLE_MODULE_IRRLICHT=ON"
-
-# # Install Chrono::VSG
-# ARG CHRONO_DIR
-# ARG PACKAGE_DIR
-# ARG USERSHELLPROFILE
-
-# # Vulkan
-# RUN sudo apt update && sudo apt install --no-install-recommends -y lsb-release && \
-#     wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc && \
-#     UBUNTU_CODENAME=$(lsb_release -cs) && \
-#     sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan.list "http://packages.lunarg.com/vulkan/lunarg-vulkan-${UBUNTU_CODENAME}.list" && \
-#     sudo apt update && sudo apt install vulkan-sdk -y && \
-#     sudo apt clean && sudo apt autoremove -y && sudo rm -rf /var/lib/apt/lists/*
-
-# # Build the VSG dependencies
-# RUN cd ${CHRONO_DIR}/contrib/build-scripts/vsg/ && \
-#     bash buildVSG.sh ${PACKAGE_DIR}/vsg/ && \
-#     rm -rf build_*
-
-# # Update shell config
-# RUN echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${PACKAGE_DIR}/vsg/lib" >> ${USERSHELLPROFILE}
-
-# # Update CMake options
-# ENV CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-#     -DENABLE_MODULE_VSG=ON \
-#     -Dvsg_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsg \
-#     -DvsgImGui_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsgImGui \
-#     -DvsgXchange_DIR=${PACKAGE_DIR}/vsg/lib/cmake/vsgXchange"
 
 # Install Chrono::Vehicle
 # Update CMake options
@@ -199,9 +159,6 @@ RUN echo "${DEFAULT_SHELL_ADD_ONS}" >> ${USERSHELLPROFILE} && \
         sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/' ${USERSHELLPROFILE} && \
         [ -z "${USER_SHELL_ADD_ONS}" ] || echo "${USER_SHELL_ADD_ONS}" >> ${USERSHELLPROFILE}
 
-# Change to the user
-USER ${USERNAME}
-
 # Sets the user, the work dir, and the command
 USER ${USERNAME}
 WORKDIR ${USERHOME}
@@ -210,4 +167,3 @@ ENV USERSHELLPATH=${USERSHELLPATH}
 ENV USERSHELLPROFILE=${USERSHELLPROFILE}
 
 CMD ["sh","-c","$USERSHELLPATH"]
-# CMD ${USERSHELLPATH}

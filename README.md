@@ -1,107 +1,79 @@
-# 🏎️ Project Chrono FSAE Simulation Environment
+# Formula UBC Lap Sim
+A lap sim of our FSAE car running on Project Chrono.
 
-## 📘 Overview
-This project uses **Project Chrono (C++)** to model and simulate a Formula SAE race car with a custom suspension and **OpenCRG-based terrain**.  
-The environment runs entirely inside a **Docker container on WSL2**, ensuring consistent builds and portability across systems (including HPC).
+## Environement Setup
+ ### 1. Install WSL
+  - Open PowerShell as an administrator and run `wsl --install`.
+  - By default this installs the latest stable release of Ubuntu.
 
----
+### 2. Install Docker
+- Download the installer from [this website][docker].
+- Ensure you select WSL backend during the installation process.
 
-## ⚙️ System Configuration
-- **Host OS:** Windows 11  
-- **Backend:** WSL2 (Linux kernel 6.6)  
-- **Container Engine:** Docker Desktop (Linux/WSL2 mode enabled)  
-- **Chrono Base Image:** `uwsbel/projectchrono:8.0`  
-  - Includes Chrono built from source  
-  - Supports C++ development (no Python bindings)  
-- **Current Status:** Docker container verified to run and compile C++ Chrono programs successfully  
+### 3. Clone the Repository
+- Start WSL by running `wsl` in a terminal.
+- In the WSL bash terminal, run `git clone git@github.com:FormulaUBCRacing/lap_sim.git`.
+- If this is your first time using git on WSL, you will need to generate an SSH key to use passwordless pushes and pulls. To do so, open a WSL bash terminal and do the following:
+  - Generate an SSH key: `ssh-keygen -t ed25519`.
+  - Copy the public key to your clipboard `cat ~/.ssh/id_rsa.pub | clip.exe`.
+    - Make sure you ONLY copy the public key (indicated by .pub file extension). Your private key (which is in the same folder) must remain secret. The command above will only copy the public key.
+  - Paste your public key into [GitHub][github] under Settings -> SSH and GPG Keys -> New SSH Key.
+  - You should now be able to clone the repo.
 
----
+### 4. Build the Docker Image and Container
+- `cd` into the project directory in WSL.
+- Copy environment variables into the `.env` file: `cp .env.example .env`.
+  - Currently there are no secrets to add to `.env`, so `.env.example` will work unmodified.
+- Run `make setup` to automatically build the Docker image and create the Docker container.
+- `make start` and `make stop` can be used to start/stop the Docker container now that it's built.
 
-## 📂 Project Structure
-~/chrono_fsae/
-├─ src/
-│ └─ main.cpp # Entry point for simulation
-├─ CMakeLists.txt # Links Chrono::ChronoEngine + Chrono::ChronoVehicle
-├─ roads/ # Contains .crg road surface files (mounted read-only)
-├─ configs/ # Vehicle and simulation parameter files
-├─ out/ # Logs, CSVs, or other simulation outputs
-└─ docker-compose.yml # Optional one-command build/run setup
+### 5. Run the Project
+- `make build` to build the project.
+  - Under construction.
+- `make bash` to get an interactive bash terminal inside the docker container.
 
-yaml
-Copy code
+## Useful Makefile Targets
+  Important: Targets marked with "host only" can only be run from outside the container. This is because these commands modify the container/image itself.
+- `make` or `make build`
+  - Compiles the project. Can be run inside or outside of the container.
 
----
+- `make setup` (host only)
+  - Ensures ensures both the image and container exist and builds them if necessary. Starts the container in detached mode after building. Should only need to be run once.
 
-## 🚀 Current Workflow
+- `make start` (host only)
+  - Starts the existing container (detached).
 
-### **1️⃣ Run Chrono container**
-```bash
-docker run --rm -it -v "$PWD":/work uwsbel/projectchrono:8.0 /bin/bash
-2️⃣ Build and run your simulation
-Inside the container:
+- `make stop` (host only)
+  - Stops the container.
 
-bash
-Copy code
-cd /work
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DChrono_DIR=/opt/chrono/build
-cmake --build . -j
-./fsae_sim /work/roads/sample.crg
-🧱 CMake Setup
-cmake
-Copy code
-cmake_minimum_required(VERSION 3.16)
-project(fsae_chrono CXX)
+- `make bash` (host only)
+  - Opens an interactive shell inside the named container. If the container is stopped this target will start it first and then open a shell. If the container does not exist it will error and suggest running `make setup` first.
+  - Example: `make bash`
 
-find_package(Chrono REQUIRED COMPONENTS ChronoEngine ChronoVehicle)
+- `make clean-setup` (host only)
+  - Removes the image and container and builds them from scratch.
 
-add_executable(fsae_sim src/main.cpp)
-target_link_libraries(fsae_sim PRIVATE Chrono::ChronoEngine Chrono::ChronoVehicle)
-target_compile_features(fsae_sim PRIVATE cxx_std_17)
-🧩 main.cpp (example)
-cpp
-Copy code
-#include <chrono/physics/ChSystemNSC.h>
-#include <chrono_vehicle/terrain/CRGTerrain.h>
-#include <iostream>
+- `make clean` (host only)
+  - Removes the container and image.
 
-int main(int argc, char** argv) {
-    std::cout << "Chrono version: " << CHRONO_VERSION << "\n";
-    chrono::ChSystemNSC sys;
+## Notes
+- The project directory is mounted at `~/chrono/lap_sim` inside the container. This means that files are shared between the host and the container. Any changes you make inside or outside the container will be reflected on the other. Having the project inside the `~/chrono` directory allows it to compile using the Project Chrono header files and pre-compiled binaries.
+- Docker container is configured to run in detached mode, so after starting the container, use `docker exec` to run commands in the container. Alternatively, `make bash` will give you an interactive terminal within the container. We will eventually have make commands to run most things inside the container so this won't be used much.
 
-    if (argc > 1) {
-        try {
-            chrono::vehicle::CRGTerrain crg(argv[1]);
-            std::cout << "Loaded CRG: " << argv[1] << "\n";
-            std::cout << "Height at (0,0): " << crg.GetSurfaceHeight(0.0, 0.0) << " m\n";
-        } catch (const std::exception& e) {
-            std::cerr << "CRG load failed: " << e.what() << "\n";
-        }
-    } else {
-        std::cout << "No CRG path given; skipping terrain init.\n";
-    }
+## Common Issues
+- After running `make start` or `make bash`:
+  ```
+  The command 'docker' could not be found in this WSL 2 distro.
+  We recommend to activate the WSL integration in Docker Desktop settings.
 
-    return 0;
-}
-🧭 Next Steps
-✅ Confirm OpenCRG support — if not enabled, rebuild Chrono from source inside a custom Dockerfile:
+  For details about using Docker Desktop with WSL 2, visit:
 
-bash
-Copy code
--DENABLE_MODULE_VEHICLE=ON -DENABLE_OPENCRG=ON
-🚀 Add custom FSAE suspension, steering, and chassis modules
+  https://docs.docker.com/go/wsl2/
+  ```
+   - Fix: Docker backend is not running on your computer. Open Docker Desktop to wake it up.
 
-🧩 Add logging/telemetry outputs to /work/out/
+- Docker Desktop won't open.
+  - Fix: Kill the process in Task Manager. Docker just does this sometimes.
 
-☁️ Deploy same container image on HPC via Apptainer/Singularity for scaled runs
-
-🎯 Long-Term Goals
-Use this Dockerized environment as a reproducible base for:
-
-Vehicle dynamics tuning and parameter sweeps
-
-Terrain interaction (CRG surfaces)
-
-Visualization (Irrlicht/VNC or headless mode)
-
-CI/HPC batch simulations using the same build
+[docker]:https://docs.docker.com/desktop/setup/install/windows-install/
+[github]: https://github.com/settings/keys
