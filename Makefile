@@ -1,4 +1,4 @@
-.PHONY: default build build-image run-container setup clean clean-image clean-container clean-setup start bash
+.PHONY: default build build-image run-container setup clean clean-image clean-container clean-setup start bash stop
 
 MAKEFLAGS += --no-print-directory
 
@@ -9,7 +9,8 @@ endif
 -include .env
 export
 
-DOCKERFILE = Dockerfile
+COMPOSE_FILE = docker-compose.yml
+SERVICE_NAME = chrono
 
 # helper to fail at runtime when a host-only target is invoked inside a container
 define host_check
@@ -19,55 +20,49 @@ if [ -f /.dockerenv ]; then \
 fi
 endef
 
-# runtime check whether the named container exists (yes/no)
-CONTAINER_EXISTS := $(shell docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qw $(CONTAINER_NAME) && echo yes || echo no)
-
 default: build
 
-# PROJECT is the only environment variable that strictly must be passed
+# Build the docker image using docker compose
 build-image:
 	@$(call host_check,build-image)
-	@echo "Building docker image $(IMAGE_NAME) using $(DOCKERFILE)"; \
-	docker build -f $(DOCKERFILE) -t $(IMAGE_NAME) \
-		--build-arg IMAGE_BASE=$(IMAGE_BASE) \
-		--build-arg IMAGE_TAG=$(IMAGE_TAG) \
-		--build-arg PROJECT=$(PROJECT) \
-		--build-arg CHRONO_BRANCH=$(CHRONO_BRANCH) \
-		--build-arg USERNAME=$(USERNAME) \
-		.
+	@echo "Building docker image using $(COMPOSE_FILE)"; \
+	docker compose -f $(COMPOSE_FILE) build
 
 run-container:
 	@$(call host_check,run-container)
-	@docker run -d --name $(CONTAINER_NAME) -v $(PWD):/home/fubc/chrono/lap_sim $(IMAGE_NAME)
+	@docker compose -f $(COMPOSE_FILE) up -d
 
 setup:
 	@$(call host_check,setup)
-	@if ! docker image inspect $(IMAGE_NAME) >/dev/null 2>&1; then \
-		make build-image; \
+	@CHRONO_EXISTS=$$(docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT) && echo yes || echo no); \
+	VNC_EXISTS=$$(docker ps -a --format '{{.Names}}' | grep -qw "$(COMPOSE)-vnc" && echo yes || echo no); \
+	if [ "$$CHRONO_EXISTS" = "no" ] || [ "$$VNC_EXISTS" = "no" ]; then \
+		echo "Creating and starting containers"; \
+		docker compose -f $(COMPOSE_FILE) up -d; \
 	else \
-		echo "Image $(IMAGE_NAME) already exists, skipping build"; \
-	fi
-	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
-		echo "Creating container $(CONTAINER_NAME)"; \
-		docker run -d --name $(CONTAINER_NAME) -v $(PWD):/home/fubc/chrono/lap_sim $(IMAGE_NAME); \
-	else \
-		echo "Container $(CONTAINER_NAME) already exists, skipping creation"; \
-		make start; \
+		echo "All containers already exist"; \
+		CHRONO_RUNNING=$$(docker ps --format '{{.Names}}' | grep -qw $(PROJECT) && echo yes || echo no); \
+		VNC_RUNNING=$$(docker ps --format '{{.Names}}' | grep -qw "$(COMPOSE)-vnc" && echo yes || echo no); \
+		if [ "$$CHRONO_RUNNING" = "no" ] || [ "$$VNC_RUNNING" = "no" ]; then \
+			echo "Starting containers"; \
+			docker compose -f $(COMPOSE_FILE) start; \
+		else \
+			echo "All containers are already running"; \
+		fi; \
 	fi
 
 clean:
 	@$(call host_check,clean)
-	@make clean-container
-	@make clean-image
-	@echo "Cleaned up image $(IMAGE_NAME) and container $(CONTAINER_NAME)"
+	@echo "Cleaning up containers and images"
+	@docker compose -f $(COMPOSE_FILE) down --rmi all
 
 clean-image:
 	@$(call host_check,clean-image)
-	@docker rmi -f $(IMAGE_NAME)
+	@docker compose -f $(COMPOSE_FILE) down --rmi all
 
 clean-container:
 	@$(call host_check,clean-container)
-	@docker rm -f $(CONTAINER_NAME)
+	@docker compose -f $(COMPOSE_FILE) down
 
 clean-setup:
 	@$(call host_check,clean-setup)
@@ -76,39 +71,39 @@ clean-setup:
 
 bash:
 	@$(call host_check,bash)
-	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
-		echo "ERROR: Container $(CONTAINER_NAME) does not exist. Run 'make setup' or 'make run-container' first."; \
+	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT); then \
+		echo "ERROR: Container $(PROJECT) does not exist. Run 'make setup' or 'make run-container' first."; \
 		exit 1; \
 	fi
-	@if docker ps --filter "name=^$(CONTAINER_NAME)$$" --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
-		docker exec -it $(CONTAINER_NAME) /bin/bash; \
+	@if docker ps --filter "name=^$(PROJECT)$$" --format '{{.Names}}' | grep -qw $(PROJECT); then \
+		docker compose -f $(COMPOSE_FILE) exec $(SERVICE_NAME) /bin/bash; \
 	else \
-		echo "Starting container $(CONTAINER_NAME)"; \
-		docker start $(CONTAINER_NAME) >/dev/null; \
-		docker exec -it $(CONTAINER_NAME) /bin/bash; \
+		echo "Starting container $(PROJECT)"; \
+		docker compose -f $(COMPOSE_FILE) start $(SERVICE_NAME); \
+		docker compose -f $(COMPOSE_FILE) exec $(SERVICE_NAME) /bin/bash; \
 	fi
 
 start:
 	@$(call host_check,start)
-	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
-		echo "ERROR: Container $(CONTAINER_NAME) does not exist. Run 'make setup' first."; \
+	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT); then \
+		echo "ERROR: Container $(PROJECT) does not exist. Run 'make setup' first."; \
 		exit 1; \
 	fi
-	@docker start $(CONTAINER_NAME) >/dev/null
-	@echo "Container $(CONTAINER_NAME) started in detached mode"
+	@docker compose -f $(COMPOSE_FILE) start $(SERVICE_NAME)
+	@echo "Container $(PROJECT) started in detached mode"
 
 stop:
 	@$(call host_check,stop)
-	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
-		echo "ERROR: Container $(CONTAINER_NAME) does not exist."; \
+	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT); then \
+		echo "ERROR: Container $(PROJECT) does not exist."; \
 		exit 1; \
 	fi
-	@docker stop $(CONTAINER_NAME) >/dev/null
-	@echo "Container $(CONTAINER_NAME) stopped"
+	@docker compose -f $(COMPOSE_FILE) stop $(SERVICE_NAME)
+	@echo "Container $(PROJECT) stopped"
 
 build:
-	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(CONTAINER_NAME); then \
-		echo "ERROR: Container $(CONTAINER_NAME) does not exist. Run 'make setup' first."; \
+	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT); then \
+		echo "ERROR: Container $(PROJECT) does not exist. Run 'make setup' first."; \
 		exit 1; \
 	fi
 	@echo "No project to build :("
