@@ -10,7 +10,7 @@ endif
 export
 
 COMPOSE_FILE = docker-compose.yml
-SERVICE_NAME = chrono
+SERVICE_NAME = dev
 
 # helper to fail at runtime when a host-only target is invoked inside a container
 define host_check
@@ -78,8 +78,7 @@ bash:
 	@if docker ps --filter "name=^$(PROJECT)$$" --format '{{.Names}}' | grep -qw $(PROJECT); then \
 		docker compose -f $(COMPOSE_FILE) exec $(SERVICE_NAME) /bin/bash; \
 	else \
-		echo "Starting container $(PROJECT)"; \
-		docker compose -f $(COMPOSE_FILE) start $(SERVICE_NAME); \
+		make start; \
 		docker compose -f $(COMPOSE_FILE) exec $(SERVICE_NAME) /bin/bash; \
 	fi
 
@@ -89,8 +88,8 @@ start:
 		echo "ERROR: Container $(PROJECT) does not exist. Run 'make setup' first."; \
 		exit 1; \
 	fi
-	@docker compose -f $(COMPOSE_FILE) start $(SERVICE_NAME)
-	@echo "Container $(PROJECT) started in detached mode"
+	@docker compose -f $(COMPOSE_FILE) start
+	@echo "All containers started in detached mode"
 
 stop:
 	@$(call host_check,stop)
@@ -98,8 +97,8 @@ stop:
 		echo "ERROR: Container $(PROJECT) does not exist."; \
 		exit 1; \
 	fi
-	@docker compose -f $(COMPOSE_FILE) stop $(SERVICE_NAME)
-	@echo "Container $(PROJECT) stopped"
+	@docker compose -f $(COMPOSE_FILE) stop
+	@echo "All containers stopped"
 
 build:
 	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT); then \

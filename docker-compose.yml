@@ -1,13 +1,13 @@
 name: chrono
 services:
-  chrono:
-    image: "${USERNAME}/${COMPOSE}"
-    hostname: '${COMPOSE}'
-    container_name: '${PROJECT}'
+  dev:
+    image: "${USERNAME}/${COMPOSE}:dev"
+    hostname: "${COMPOSE}-dev"
+    container_name: "${PROJECT}-dev"
     build:
       context: "./"
+      dockerfile: "./docker/dev.dockerfile"
       network: "host"
-      dockerfile: "./docker/chrono.dockerfile"
       args:
         PROJECT: "${COMPOSE}"
         IMAGE_BASE: "${IMAGE_BASE}"
