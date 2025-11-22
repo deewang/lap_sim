@@ -45,7 +45,7 @@ RUN if getent passwd ${USER_UID}; then \
 # Change to the user
 USER ${USERNAME}
 
-ARG CHRONO_BRANCH="main"
+ARG CHRONO_BRANCH="release/9.0"
 ARG CHRONO_REPO="https://github.com/projectchrono/chrono.git"
 ARG CHRONO_DIR="${USERHOME}/chrono"
 ARG CHRONO_INSTALL_DIR="${USERHOME}/packages/chrono"
@@ -146,6 +146,7 @@ USER root
 # Install dependencies
 ARG APT_DEPENDENCIES=""
 RUN apt-get update && \
+        apt-get install --no-install-recommends -y gnuplot && \
         [ -z "${APT_DEPENDENCIES}" ] || apt-get install --no-install-recommends -y ${APT_DEPENDENCIES} && \
         apt-get clean && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
