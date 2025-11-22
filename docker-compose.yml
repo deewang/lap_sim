@@ -1,0 +1,42 @@
+name: chrono
+services:
+  chrono:
+    image: "${USERNAME}/${COMPOSE}"
+    hostname: '${COMPOSE}'
+    container_name: '${PROJECT}'
+    build:
+      context: "./"
+      network: "host"
+      dockerfile: "./docker/chrono.dockerfile"
+      args:
+        PROJECT: "${COMPOSE}"
+        IMAGE_BASE: "${IMAGE_BASE}"
+        IMAGE_TAG: "${IMAGE_TAG}"
+        USERNAME: "${USERNAME}"
+        CHRONO_BRANCH: "${CHRONO_BRANCH}"
+        USER_GROUPS: "dialout video"
+        APT_DEPENDENCIES: "vim cmake-curses-gui"
+        USER_SHELL_ADD_ONS: "alias python=python3"
+    volumes:
+      - './:/home/${USERNAME}/${COMPOSE}/${PROJECT}'
+      - '/tmp/.X11-unix:/tmp/.X11-unix'
+    environment:
+      DISPLAY: '${DISPLAY:-vnc:0.0}'
+    working_dir: '/home/${USERNAME}/${COMPOSE}/${PROJECT}'
+    tty: true
+  vnc:
+    image: "camera/${COMPOSE}:vnc"
+    hostname: "${COMPOSE}-vnc"
+    container_name: "${COMPOSE}-vnc"
+    build:
+      context: "./"
+      dockerfile: "./docker/vnc.dockerfile"
+      network: "host"
+      args:
+        VNC_PASSWORD: "${COMPOSE}"
+    ports:
+      - "127.0.0.1:8080-8099:8080"
+      - "127.0.0.1:5900-5999:5900"
+networks:
+  default:
+    name: "${COMPOSE}"
