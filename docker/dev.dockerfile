@@ -20,7 +20,8 @@ ARG USERSHELLPROFILE="${USERHOME}/.${USERSHELL}rc"
 USER root
 RUN apt-get update && \
         apt-get install --no-install-recommends -y sudo python3-pip && \
-        apt-get clean && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        apt-get clean && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* && \
+        apt-get install -y openssh-client
 
 # Add user and grant sudo permission.
 ARG USER_UID=1000

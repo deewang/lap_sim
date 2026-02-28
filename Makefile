@@ -100,13 +100,11 @@ stop:
 	@docker compose -f $(COMPOSE_FILE) stop
 	@echo "All containers stopped"
 
-CMAKE_BUILD_DIR = $(CURDIR)/build/cmake
-
 build:
-	@cmake -S $(CURDIR) -B $(CMAKE_BUILD_DIR) \
+	@cmake -S $(CURDIR) -B $(CURDIR)/build/cmake \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_PREFIX_PATH="$(CURDIR)/../build/cmake"
-	@cmake --build $(CMAKE_BUILD_DIR) -- -j$$(nproc)
+	@cmake --build $(CURDIR)/build/cmake -- -j$$(nproc)
 
 run:
 	@if [ ! -f $(CURDIR)/build/bin/lap_sim ]; then \
@@ -114,6 +112,4 @@ run:
 		exit 1; \
 	fi
 	$(CURDIR)/build/bin/lap_sim
-
-run:
 
