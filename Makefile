@@ -1,4 +1,4 @@
-.PHONY: default build build-image run-container setup clean clean-image clean-container clean-setup start bash stop
+.PHONY: default build run build-image run-container setup clean clean-image clean-container clean-setup start bash stop
 
 MAKEFLAGS += --no-print-directory
 
@@ -100,9 +100,20 @@ stop:
 	@docker compose -f $(COMPOSE_FILE) stop
 	@echo "All containers stopped"
 
+CMAKE_BUILD_DIR = $(CURDIR)/build/cmake
+
 build:
-	@if ! docker ps -a --format '{{.Names}}' | grep -qw $(PROJECT); then \
-		echo "ERROR: Container $(PROJECT) does not exist. Run 'make setup' first."; \
+	@cmake -S $(CURDIR) -B $(CMAKE_BUILD_DIR) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_PREFIX_PATH="$(CURDIR)/../build/cmake"
+	@cmake --build $(CMAKE_BUILD_DIR) -- -j$$(nproc)
+
+run:
+	@if [ ! -f $(CURDIR)/build/bin/lap_sim ]; then \
+		echo "ERROR: executable not found, run 'make build' first"; \
 		exit 1; \
 	fi
-	@echo "No project to build :("
+	$(CURDIR)/build/bin/lap_sim
+
+run:
+

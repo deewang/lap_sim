@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../lib/liblap_sim_lib.a CMakeFiles/lap_sim_lib.dir/src/build_vehicle.cpp.o
+/usr/bin/ranlib ../lib/liblap_sim_lib.a
