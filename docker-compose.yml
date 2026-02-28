@@ -20,7 +20,7 @@ services:
     volumes:
       - './:/home/${USERNAME}/${COMPOSE}/${PROJECT}'
       - '/tmp/.X11-unix:/tmp/.X11-unix'
-      - '~/.ssh:/home/${USERNAME}/.ssh:ro'
+      - '$HOME/.ssh:/home/${USERNAME}/.ssh:ro'
     environment:
       DISPLAY: '${DISPLAY:-vnc:0.0}'
     working_dir: '/home/${USERNAME}/${COMPOSE}/${PROJECT}'
