@@ -46,6 +46,11 @@ RUN if getent passwd ${USER_UID}; then \
 # Change to the user
 USER ${USERNAME}
 
+# Generate SSH key for container user (no passphrase)
+RUN mkdir -p ~/.ssh && \
+    ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -q && \
+    chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_ed25519
+
 ARG CHRONO_BRANCH="release/9.0"
 ARG CHRONO_REPO="https://github.com/projectchrono/chrono.git"
 ARG CHRONO_DIR="${USERHOME}/chrono"
